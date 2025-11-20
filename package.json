@@ -1,6 +1,7 @@
 {
   "name": "briefing-contabil-vercel",
   "version": "1.0.0",
+  "type": "module",
   "description": "Sistema de Briefing Contábil Dinâmico",
   "private": true,
   "scripts": {
