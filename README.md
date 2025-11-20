@@ -19,7 +19,26 @@ cd backend && npm run start:dev
 npm run dev
 ```
 
-**Acesse:** http://localhost:5173
+**Acesse:** http://localhost:3000
+
+---
+
+## 🌐 Deploy em Produção
+
+**⚠️ IMPORTANTE:** A Vercel hospeda apenas o frontend!
+
+Para ter o sistema completo funcionando:
+
+1. **Frontend:** Já deployado na Vercel ✅
+2. **Backend:** Precisa ser deployado separadamente
+3. **Banco de Dados:** PostgreSQL em plataforma externa
+
+**Leia o guia completo:** [DEPLOY-BACKEND.md](./DEPLOY-BACKEND.md)
+
+**Opções recomendadas:**
+- **Railway** (mais fácil) - Backend + PostgreSQL incluído
+- **Render** (gratuito) - Backend + PostgreSQL incluído
+- **Vercel + Neon** - Frontend na Vercel + Backend serverless + PostgreSQL
 
 ---
 
