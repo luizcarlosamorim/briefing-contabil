@@ -1,0 +1,194 @@
+╔══════════════════════════════════════════════════════════════╗
+║        🚀 DEPLOY RÁPIDO NA VERCEL - 3 MINUTOS              ║
+╚══════════════════════════════════════════════════════════════╝
+
+📋 OPÇÃO 1: VIA GITHUB (MAIS FÁCIL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ SUBA PARA O GITHUB
+
+   a) Crie repositório em: https://github.com/new
+   b) Nome: briefing-contabil
+   c) Clique em "Create repository"
+   
+   d) No terminal/cmd, dentro da pasta do projeto:
+   
+      git init
+      git add .
+      git commit -m "Deploy inicial"
+      git branch -M main
+      git remote add origin https://github.com/SEU-USUARIO/briefing-contabil.git
+      git push -u origin main
+
+2️⃣ CONECTE NA VERCEL
+
+   a) Acesse: https://vercel.com
+   b) Clique em "Sign Up" (cadastro grátis)
+   c) Use sua conta do GitHub
+   d) Clique em "New Project"
+   e) Selecione seu repositório "briefing-contabil"
+   f) Clique em "Deploy"
+
+3️⃣ PRONTO! ✅
+
+   Em 2-3 minutos você receberá uma URL tipo:
+   https://briefing-contabil.vercel.app
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 OPÇÃO 2: VIA VERCEL CLI (DIRETO)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ INSTALE VERCEL CLI
+
+   npm install -g vercel
+
+2️⃣ FAÇA LOGIN
+
+   vercel login
+   
+   (Abrirá o navegador para confirmar)
+
+3️⃣ DEPLOY
+
+   vercel
+   
+   Responda as perguntas:
+   - Set up and deploy? → Y
+   - Which scope? → Seu usuário
+   - Link to existing project? → N
+   - What's your project's name? → briefing-contabil
+   - In which directory? → ./
+   - Want to override settings? → N
+
+4️⃣ PARA PRODUÇÃO
+
+   vercel --prod
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 OPÇÃO 3: ARRASTAR E SOLTAR (SEM TERMINAL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ Requer Node.js instalado localmente
+
+1️⃣ BUILD LOCAL
+
+   No terminal, dentro da pasta:
+   
+   npm install
+   npm run build
+
+2️⃣ UPLOAD
+
+   a) Acesse: https://vercel.com/new
+   b) Arraste a pasta "dist" para a área de upload
+   c) Aguarde o upload completar
+
+3️⃣ PRONTO! ✅
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ CHECKLIST PRÉ-DEPLOY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+☐ Node.js instalado
+☐ Pasta do projeto pronta
+☐ Conta na Vercel criada
+☐ Git instalado (para Opção 1)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 APÓS O DEPLOY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Você terá:
+✓ URL pública (https://seu-projeto.vercel.app)
+✓ HTTPS automático
+✓ Deploy automático a cada git push
+✓ Analytics grátis
+✓ Domínio personalizado (opcional)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔧 COMANDOS ÚTEIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Testar localmente
+npm run dev
+
+# Build de produção
+npm run build
+
+# Deploy preview
+vercel
+
+# Deploy produção
+vercel --prod
+
+# Ver logs
+vercel logs
+
+# Remover projeto
+vercel remove
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🌐 DOMÍNIO PERSONALIZADO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Compre um domínio (ex: Registro.br, GoDaddy)
+2. Na Vercel: Settings → Domains
+3. Adicione seu domínio
+4. Configure DNS conforme instruções
+5. Pronto!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💰 PREÇOS VERCEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Hobby (Grátis):
+✓ Deploy ilimitados
+✓ HTTPS
+✓ 100GB bandwidth/mês
+✓ Perfeito para este projeto!
+
+Pro ($20/mês):
+✓ Mais recursos
+✓ Suporte prioritário
+✓ Analytics avançado
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🆘 PROBLEMAS COMUNS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ "npm não encontrado"
+   → Instale Node.js: https://nodejs.org
+
+❌ "git não encontrado"
+   → Instale Git: https://git-scm.com
+
+❌ Build falha na Vercel
+   → Teste localmente: npm run build
+   → Veja o log de erro na Vercel
+
+❌ Página em branco
+   → F12 para ver erros no console
+   → Verifique se API está funcionando
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📞 LINKS ÚTEIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Vercel: https://vercel.com
+Docs: https://vercel.com/docs
+GitHub: https://github.com
+Node.js: https://nodejs.org
+Git: https://git-scm.com
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎉 BOA SORTE COM SEU DEPLOY!
