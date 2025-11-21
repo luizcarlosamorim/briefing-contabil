@@ -2,52 +2,71 @@
 
 Sistema profissional para coleta e gestão de briefings contábeis.
 
-## 🚀 Quick Start
+## 🏗️ Arquitetura
+
+```
+┌─────────────────┐     ┌─────────────────┐
+│   Vercel        │     │   Supabase      │
+│   (Frontend)    │ ←→  │   (Backend)     │
+│                 │     │                 │
+│   React + Vite  │     │   PostgreSQL    │
+│   Tailwind CSS  │     │   Auth          │
+└─────────────────┘     └─────────────────┘
+```
+
+**100% Grátis** - Vercel + Supabase
+
+---
+
+## 🚀 Deploy em Produção (Recomendado)
+
+### Passo 1: Criar tabelas no Supabase
+1. Acesse: https://supabase.com/dashboard
+2. Selecione seu projeto
+3. Vá em **SQL Editor** → **New Query**
+4. Cole o SQL de `supabase/schema.sql`
+5. Clique em **Run**
+
+### Passo 2: Configurar Vercel
+1. Acesse: https://vercel.com/dashboard
+2. Seu projeto → **Settings** → **Environment Variables**
+3. Adicione:
+   - `VITE_SUPABASE_URL` = sua URL do Supabase
+   - `VITE_SUPABASE_ANON_KEY` = sua chave anon
+   - `VITE_INFOSIMPLES_TOKEN` = seu token Infosimples
+4. Redeploy o projeto
+
+**Guia completo:** [SUPABASE-SETUP.md](./SUPABASE-SETUP.md)
+
+---
+
+## 💻 Desenvolvimento Local
 
 ```bash
 # 1. Instalar dependências
 npm install
-cd backend && npm install && cd ..
 
-# 2. Iniciar banco de dados
-docker-compose up -d
+# 2. Configurar variáveis de ambiente
+cp .env.example .env
+# Edite .env com suas credenciais do Supabase
 
-# 3. Backend (Terminal 1)
-cd backend && npm run start:dev
-
-# 4. Frontend (Terminal 2)
+# 3. Iniciar frontend
 npm run dev
 ```
 
 **Acesse:** http://localhost:3000
 
----
-
-## 🌐 Deploy em Produção
-
-**⚠️ IMPORTANTE:** A Vercel hospeda apenas o frontend!
-
-Para ter o sistema completo funcionando:
-
-1. **Frontend:** Já deployado na Vercel ✅
-2. **Backend:** Precisa ser deployado separadamente
-3. **Banco de Dados:** PostgreSQL em plataforma externa
-
-**Leia o guia completo:** [DEPLOY-BACKEND.md](./DEPLOY-BACKEND.md)
-
-**Opções recomendadas:**
-- **Railway** (mais fácil) - Backend + PostgreSQL incluído
-- **Render** (gratuito) - Backend + PostgreSQL incluído
-- **Vercel + Neon** - Frontend na Vercel + Backend serverless + PostgreSQL
+> **Nota:** Para desenvolvimento local, você precisa ter as tabelas criadas no Supabase.
 
 ---
 
-## 📚 Documentação Completa
+## 📚 Documentação
 
-- **🎯 [Próximos Passos](./PROXIMOS-PASSOS.md)** - Comece aqui!
-- **📖 [Setup Local](./SETUP-LOCAL.md)** - Guia detalhado de instalação
-- **🔍 [Análise do Projeto](./ANALISE-PROJETO.md)** - Lacunas e melhorias
-- **📚 [Documentação Técnica](./docs/README.md)** - Completa (11 documentos)
+| Documento | Descrição |
+|-----------|-----------|
+| [SUPABASE-SETUP.md](./SUPABASE-SETUP.md) | Guia completo de configuração |
+| [supabase/schema.sql](./supabase/schema.sql) | SQL para criar tabelas |
+| [.env.example](./.env.example) | Template de variáveis |
 
 ---
 
@@ -55,23 +74,23 @@ Para ter o sistema completo funcionando:
 
 ```
 briefing-vercel/
-├── src/                    # Frontend (React + Vite)
-│   ├── App.jsx            # Componente principal
-│   ├── admin/             # Login admin
-│   ├── hooks/             # React hooks
-│   └── services/          # API client
+├── src/                      # Frontend (React + Vite)
+│   ├── App.jsx              # Componente principal
+│   ├── admin/               # Dashboard admin
+│   ├── pages/               # Páginas (Protocolo)
+│   ├── components/          # Componentes React
+│   └── services/            #
+│       └── supabase.js      # Cliente Supabase
 │
-├── backend/               # Backend (NestJS)
-│   └── src/
-│       ├── auth/          # Autenticação JWT
-│       ├── briefings/     # Core do sistema
-│       ├── users/         # Gestão de usuários
-│       └── config/        # Configurações
+├── supabase/                # Configuração Supabase
+│   └── schema.sql           # SQL das tabelas
 │
-├── docs/                  # Documentação (11 arquivos)
-├── docker-compose.yml     # PostgreSQL
-├── .env                   # Variáveis frontend
-└── backend/.env           # Variáveis backend
+├── backend/                 # Backend NestJS (legado)
+│   └── ...                  # Não mais necessário
+│
+├── .env                     # Variáveis locais
+├── .env.example             # Template
+└── SUPABASE-SETUP.md        # Guia de setup
 ```
 
 ---
@@ -79,31 +98,39 @@ briefing-vercel/
 ## 🛠️ Tecnologias
 
 - **Frontend:** React 18 + Vite + TailwindCSS
-- **Backend:** NestJS + TypeORM + PostgreSQL
-- **Auth:** JWT + Bcrypt
+- **Backend:** Supabase (PostgreSQL + Auth + API)
+- **Deploy:** Vercel (frontend)
 - **Integração:** API Infosimples (CNPJ)
 
 ---
 
-## ⚠️ Status do Projeto
+## ✅ Status do Projeto
 
-✅ **Funcionando:** 85% completo
-🔴 **Atenção:** Melhorias críticas necessárias (ver [ANALISE-PROJETO.md](./ANALISE-PROJETO.md))
+| Feature | Status |
+|---------|--------|
+| Formulário de Briefing | ✅ Funcionando |
+| Consulta CNPJ (Infosimples) | ✅ Funcionando |
+| Salvamento no Supabase | ✅ Funcionando |
+| Página de Protocolo | ✅ Funcionando |
+| Dashboard Admin | ✅ Funcionando |
+| Login Admin | ✅ Funcionando |
 
-### Melhorias Urgentes
+---
 
-1. 🔴 **Segurança:** Mover token Infosimples para backend
-2. 🔴 **Performance:** Refatorar App.jsx (1800+ linhas)
-3. 🟡 **UX:** Melhorar tratamento de erros
+## 🔐 Credenciais de Teste
+
+Após criar usuário no Supabase Authentication:
+
+- **Email:** admin@admin.com
+- **Senha:** admin123
 
 ---
 
 ## 📞 Suporte
 
-- **Documentação:** [docs/README.md](./docs/README.md)
 - **Issues:** GitHub Issues
 - **Email:** suporte@briefingcontabil.com.br
 
 ---
 
-**Última atualização:** 2025-01-14
+**Última atualização:** 2025-11-21

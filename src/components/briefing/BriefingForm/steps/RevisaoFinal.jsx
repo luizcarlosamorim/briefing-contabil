@@ -5,7 +5,7 @@ import { useBriefing } from '../../../../contexts/BriefingContext';
 import { useAuth } from '../../../../hooks/useAuth';
 import { Button } from '../../../common/Button';
 import { tiposEntidade } from '../../../../constants/briefingData';
-import api from '../../../../services/api';
+import { briefingsService } from '../../../../services/supabase';
 
 export const RevisaoFinal = () => {
   const { dados, tipoEntidade, etapaAnterior, salvarProgresso } = useBriefing();
@@ -100,11 +100,11 @@ Sistema: Briefing Contábil v2.0
   const salvarNoBanco = async () => {
     setSalvando(true);
     try {
-      console.log('[DEBUG] Iniciando salvamento do briefing...');
+      console.log('[DEBUG] Iniciando salvamento do briefing no Supabase...');
       console.log('[DEBUG] Dados completos:', dados);
       console.log('[DEBUG] Tipo Entidade:', tipoEntidade);
 
-      // Preparar dados para envio
+      // Preparar dados para envio ao Supabase
       const briefingData = {
         // Dados Gerais
         nomeCliente: dados.dadosGerais.nomeCliente,
@@ -142,8 +142,9 @@ Sistema: Briefing Contábil v2.0
 
       console.log('[DEBUG] Dados formatados para envio:', briefingData);
 
-      const response = await api.post('/briefings', briefingData);
-      console.log('[DEBUG] Resposta do servidor:', response.data);
+      // Usar Supabase para salvar
+      const response = await briefingsService.create(briefingData);
+      console.log('[DEBUG] Resposta do Supabase:', response.data);
       const briefingSalvo = response.data;
 
       setProtocolo(briefingSalvo.protocolo);
@@ -153,11 +154,10 @@ Sistema: Briefing Contábil v2.0
       return briefingSalvo;
     } catch (error) {
       console.error('[DEBUG] Erro ao salvar briefing:', error);
-      console.error('[DEBUG] Detalhes do erro:', error.response?.data);
-      console.error('[DEBUG] Status HTTP:', error.response?.status);
+      console.error('[DEBUG] Detalhes do erro:', error.message);
 
-      const mensagemErro = error.response?.data?.message || 'Erro desconhecido';
-      alert(`❌ Erro ao salvar briefing.\n\nDetalhes: ${JSON.stringify(mensagemErro, null, 2)}\n\nVerifique o console para mais informações.`);
+      const mensagemErro = error.message || 'Erro desconhecido';
+      alert(`❌ Erro ao salvar briefing.\n\nDetalhes: ${mensagemErro}\n\nVerifique o console para mais informações.`);
       return null;
     } finally {
       setSalvando(false);

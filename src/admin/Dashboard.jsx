@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { LogOut, FileText, Users, Settings, Eye, Loader } from 'lucide-react';
-import { briefings as briefingsAPI } from '../services/api';
+import { briefingsService } from '../services/supabase';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -19,10 +19,24 @@ const Dashboard = () => {
   const carregarBriefings = async () => {
     try {
       setLoading(true);
-      const response = await briefingsAPI.getAll();
-      setBriefings(response.data.data || []);
+      const response = await briefingsService.getAll();
+      // Converter snake_case para camelCase para compatibilidade
+      const briefingsFormatados = (response.data.data || []).map(b => ({
+        id: b.id,
+        protocolo: b.protocolo,
+        nomeCliente: b.nome_cliente,
+        cpfCnpj: b.cpf_cnpj,
+        email: b.email,
+        telefone: b.telefone,
+        finalidade: b.finalidade,
+        tipoEntidade: b.tipo_entidade,
+        entidadeNome: b.entidade_nome,
+        status: b.status,
+        createdAt: b.created_at
+      }));
+      setBriefings(briefingsFormatados);
     } catch (error) {
-      console.error('Erro ao carregar briefings:', error);
+      console.error('Erro ao carregar briefings do Supabase:', error);
     } finally {
       setLoading(false);
     }
@@ -229,9 +243,9 @@ const Dashboard = () => {
         )}
 
         {/* System Info */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800">
-            <strong>Status:</strong> Sistema operacional • Backend conectado • Autenticação ativa
+        <div className="mt-8 bg-green-50 border border-green-200 rounded-lg p-4">
+          <p className="text-sm text-green-800">
+            <strong>Status:</strong> Sistema operacional • Supabase conectado • Autenticação ativa
           </p>
         </div>
       </main>

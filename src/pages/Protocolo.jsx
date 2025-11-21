@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FileText, User, Mail, Phone, Building, MapPin, Users, Calendar, CheckCircle, AlertCircle, ArrowLeft, Download } from 'lucide-react';
-import api from '../services/api';
+import { briefingsService } from '../services/supabase';
 
 export default function Protocolo() {
   const { numero } = useParams();
@@ -14,11 +14,35 @@ export default function Protocolo() {
     const buscarBriefing = async () => {
       try {
         setLoading(true);
-        const response = await api.get(`/briefings/protocolo/${numero}`);
-        setBriefing(response.data);
+        const response = await briefingsService.getByProtocolo(numero);
+        // Converter snake_case para camelCase
+        const b = response.data;
+        const briefingFormatado = {
+          id: b.id,
+          protocolo: b.protocolo,
+          nomeCliente: b.nome_cliente,
+          cpfCnpj: b.cpf_cnpj,
+          email: b.email,
+          telefone: b.telefone,
+          finalidade: b.finalidade,
+          tipoEntidade: b.tipo_entidade,
+          entidadeNome: b.entidade_nome,
+          objetoSocial: b.objeto_social,
+          faturamentoEstimado: b.faturamento_estimado,
+          capitalSocial: b.capital_social,
+          totalQuotas: b.total_quotas,
+          endereco: b.endereco || {},
+          inscricoes: b.inscricoes || {},
+          socios: b.socios || [],
+          documentos: b.documentos || [],
+          especificos: b.especificos || {},
+          status: b.status,
+          createdAt: b.created_at
+        };
+        setBriefing(briefingFormatado);
       } catch (err) {
         console.error('Erro ao buscar protocolo:', err);
-        setError(err.response?.data?.message || 'Protocolo não encontrado');
+        setError(err.message || 'Protocolo não encontrado');
       } finally {
         setLoading(false);
       }
