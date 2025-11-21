@@ -4,20 +4,30 @@
 
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
-// Flag para verificar se Supabase está configurado
-export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey)
+// Flag para verificar se Supabase está configurado corretamente
+export const isSupabaseConfigured = !!(
+  supabaseUrl &&
+  supabaseAnonKey &&
+  supabaseUrl.startsWith('https://')
+)
 
 if (!isSupabaseConfigured) {
-  console.warn('⚠️ Supabase não configurado. Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY')
+  console.warn('⚠️ Supabase não configurado corretamente.')
+  console.warn('Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY na Vercel.')
+  console.warn('URL atual:', supabaseUrl || '(vazio)')
 }
 
-// Criar cliente Supabase (mesmo sem config, para evitar erros de importação)
+// URL padrão válida para evitar erro de inicialização
+const FALLBACK_URL = 'https://placeholder.supabase.co'
+const FALLBACK_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDUxOTI4MjAsImV4cCI6MTk2MDc2ODgyMH0.placeholder'
+
+// Criar cliente Supabase (usa fallback se não configurado para evitar crash)
 export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key'
+  isSupabaseConfigured ? supabaseUrl : FALLBACK_URL,
+  isSupabaseConfigured ? supabaseAnonKey : FALLBACK_KEY
 )
 
 // ============================================
