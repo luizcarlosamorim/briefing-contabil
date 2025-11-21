@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { supabase } from '../services/supabase';
+import { supabase, isSupabaseConfigured } from '../services/supabase';
 
 const AuthContext = createContext({});
 
@@ -10,8 +10,28 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const loadUser = async () => {
       try {
+        // Se Supabase não está configurado, usar apenas localStorage
+        if (!isSupabaseConfigured) {
+          console.warn('Supabase não configurado, usando localStorage');
+          const savedUser = localStorage.getItem('user');
+          if (savedUser) {
+            try {
+              setUser(JSON.parse(savedUser));
+            } catch (e) {
+              localStorage.removeItem('user');
+            }
+          }
+          setLoading(false);
+          return;
+        }
+
         // Verificar se há sessão ativa no Supabase
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          console.error('Erro ao obter sessão:', sessionError);
+          throw sessionError;
+        }
 
         if (session?.user) {
           // Buscar perfil do usuário
@@ -31,7 +51,11 @@ export function AuthProvider({ children }) {
           // Fallback: verificar localStorage (compatibilidade)
           const savedUser = localStorage.getItem('user');
           if (savedUser) {
-            setUser(JSON.parse(savedUser));
+            try {
+              setUser(JSON.parse(savedUser));
+            } catch (e) {
+              localStorage.removeItem('user');
+            }
           }
         }
       } catch (error) {
@@ -39,7 +63,11 @@ export function AuthProvider({ children }) {
         // Fallback: verificar localStorage
         const savedUser = localStorage.getItem('user');
         if (savedUser) {
-          setUser(JSON.parse(savedUser));
+          try {
+            setUser(JSON.parse(savedUser));
+          } catch (e) {
+            localStorage.removeItem('user');
+          }
         }
       } finally {
         setLoading(false);
@@ -48,39 +76,57 @@ export function AuthProvider({ children }) {
 
     loadUser();
 
-    // Listener para mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
+    // Listener para mudanças de autenticação (apenas se Supabase configurado)
+    let subscription = null;
 
-          const userData = {
-            id: session.user.id,
-            email: session.user.email,
-            name: profile?.name || session.user.email.split('@')[0],
-            role: profile?.role || 'user',
-          };
-          setUser(userData);
-          localStorage.setItem('user', JSON.stringify(userData));
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          localStorage.removeItem('user');
-          localStorage.removeItem('token');
-        }
+    if (isSupabaseConfigured) {
+      try {
+        const { data } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            if (event === 'SIGNED_IN' && session?.user) {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+
+              const userData = {
+                id: session.user.id,
+                email: session.user.email,
+                name: profile?.name || session.user.email.split('@')[0],
+                role: profile?.role || 'user',
+              };
+              setUser(userData);
+              localStorage.setItem('user', JSON.stringify(userData));
+            } else if (event === 'SIGNED_OUT') {
+              setUser(null);
+              localStorage.removeItem('user');
+              localStorage.removeItem('token');
+            }
+          }
+        );
+        subscription = data?.subscription;
+      } catch (error) {
+        console.error('Erro ao configurar listener de auth:', error);
       }
-    );
+    }
 
     return () => {
-      subscription?.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 
   const login = async (email, password) => {
     try {
+      if (!isSupabaseConfigured) {
+        return {
+          success: false,
+          error: 'Supabase não configurado. Configure as variáveis de ambiente.',
+        };
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -118,6 +164,13 @@ export function AuthProvider({ children }) {
 
   const register = async (name, email, password) => {
     try {
+      if (!isSupabaseConfigured) {
+        return {
+          success: false,
+          error: 'Supabase não configurado. Configure as variáveis de ambiente.',
+        };
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -155,7 +208,9 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      if (isSupabaseConfigured) {
+        await supabase.auth.signOut();
+      }
     } catch (error) {
       console.error('Erro no logout:', error);
     } finally {
