@@ -1,12 +1,9 @@
 // ============================================
-// Serviço de Consulta CNPJ - Infosimples API
+// Serviço de Consulta CNPJ - Via API Proxy
 // ============================================
 
-const INFOSIMPLES_TOKEN = import.meta.env.VITE_INFOSIMPLES_TOKEN;
-const INFOSIMPLES_URL = 'https://api.infosimples.com/api/v2/consultas/receita-federal/cnpj';
-
 /**
- * Consulta CNPJ diretamente na API Infosimples
+ * Consulta CNPJ através do proxy serverless (evita CORS)
  * @param {string} cnpj - CNPJ a ser consultado (com ou sem formatação)
  * @returns {Promise<Object>} Dados do CNPJ
  */
@@ -14,14 +11,14 @@ export const consultarCNPJ = async (cnpj) => {
   try {
     const cnpjLimpo = cnpj.replace(/[^\d]/g, '');
 
-    if (!INFOSIMPLES_TOKEN) {
-      throw new Error('Token Infosimples não configurado. Configure VITE_INFOSIMPLES_TOKEN.');
-    }
+    console.log('🔍 Consultando CNPJ via API proxy...');
 
-    console.log('🔍 Consultando CNPJ na Infosimples...');
+    // Chamar a API proxy (serverless function da Vercel)
+    // Em produção: /api/cnpj
+    // Em desenvolvimento: pode usar localhost:3001 se tiver backend
+    const apiUrl = `/api/cnpj?cnpj=${cnpjLimpo}`;
 
-    // Chamada direta à API Infosimples
-    const response = await fetch(`${INFOSIMPLES_URL}?cnpj=${cnpjLimpo}&token=${INFOSIMPLES_TOKEN}`, {
+    const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -29,78 +26,18 @@ export const consultarCNPJ = async (cnpj) => {
     });
 
     if (!response.ok) {
-      throw new Error(`Erro HTTP: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.message || `Erro HTTP: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('✅ CNPJ encontrado:', data.nome);
 
-    // Verificar se a API retornou sucesso
-    if (data.code !== 200) {
-      throw new Error(data.message || data.code_message || 'Erro na consulta do CNPJ');
-    }
-
-    // Retornar dados formatados (mantendo compatibilidade com formato esperado)
-    return formatarDadosInfosimples(data.data[0]);
+    return data;
   } catch (error) {
     console.error('Erro ao consultar CNPJ:', error);
     throw error;
   }
-};
-
-/**
- * Formata os dados retornados da Infosimples para o formato esperado pelo sistema
- * Mantém compatibilidade com o formato que o useCNPJ.js espera
- */
-const formatarDadosInfosimples = (dados) => {
-  if (!dados) return null;
-
-  return {
-    // Dados básicos (formato esperado pelo useCNPJ)
-    cnpj: dados.cnpj,
-    nome: dados.razao_social,
-    fantasia: dados.nome_fantasia || '',
-    situacao: dados.situacao_cadastral,
-    data_situacao: dados.data_situacao_cadastral,
-    natureza_juridica: dados.natureza_juridica,
-    data_abertura: dados.data_abertura,
-    capital_social: dados.capital_social,
-    porte: dados.porte,
-
-    // Endereço (formato esperado)
-    logradouro: dados.logradouro,
-    numero: dados.numero,
-    complemento: dados.complemento,
-    bairro: dados.bairro,
-    municipio: dados.municipio,
-    uf: dados.uf,
-    cep: dados.cep,
-
-    // Contato
-    email: dados.email,
-    telefone: dados.telefone,
-
-    // Atividades (formato esperado: array com objetos { text })
-    atividade_principal: dados.atividade_principal ? [{
-      code: dados.atividade_principal.codigo,
-      text: dados.atividade_principal.descricao,
-    }] : [],
-    atividades_secundarias: (dados.atividades_secundarias || []).map(a => ({
-      code: a.codigo,
-      text: a.descricao,
-    })),
-
-    // QSA - Quadro de Sócios e Administradores (formato esperado)
-    qsa: (dados.qsa || []).map((socio) => ({
-      nome_socio: socio.nome,
-      nome: socio.nome,
-      qualificacao_socio: socio.qualificacao,
-      qualificacao: socio.qualificacao,
-      cpf_cnpj_socio: socio.cpf_cnpj || '',
-    })),
-
-    // Dados originais (para referência)
-    _raw: dados,
-  };
 };
 
 /**
