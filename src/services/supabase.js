@@ -27,7 +27,21 @@ const FALLBACK_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 // Criar cliente Supabase (usa fallback se não configurado para evitar crash)
 export const supabase = createClient(
   isSupabaseConfigured ? supabaseUrl : FALLBACK_URL,
-  isSupabaseConfigured ? supabaseAnonKey : FALLBACK_KEY
+  isSupabaseConfigured ? supabaseAnonKey : FALLBACK_KEY,
+  {
+    auth: {
+      // Persistir sessão no localStorage
+      persistSession: true,
+      // Usar localStorage para armazenar a sessão
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      // Auto-refresh do token
+      autoRefreshToken: true,
+      // Detectar sessão em outras abas
+      detectSessionInUrl: true,
+      // Chave customizada para o localStorage
+      storageKey: 'briefing-auth-token',
+    }
+  }
 )
 
 // ============================================

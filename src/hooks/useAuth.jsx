@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 
 const AuthContext = createContext({});
@@ -6,22 +6,62 @@ const AuthContext = createContext({});
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sessionChecked, setSessionChecked] = useState(false);
+
+  // Função para carregar dados do usuário a partir da sessão
+  const loadUserFromSession = useCallback(async (session) => {
+    if (!session?.user) {
+      return null;
+    }
+
+    try {
+      // Buscar perfil do usuário
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+
+      const userData = {
+        id: session.user.id,
+        email: session.user.email,
+        name: profile?.name || session.user.user_metadata?.name || session.user.email.split('@')[0],
+        role: profile?.role || session.user.user_metadata?.role || 'user',
+      };
+
+      return userData;
+    } catch (error) {
+      console.error('Erro ao buscar perfil:', error);
+      // Retorna dados básicos mesmo se não conseguir buscar o perfil
+      return {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.user_metadata?.name || session.user.email.split('@')[0],
+        role: session.user.user_metadata?.role || 'user',
+      };
+    }
+  }, []);
 
   useEffect(() => {
-    const loadUser = async () => {
+    let mounted = true;
+
+    const initializeAuth = async () => {
       try {
+        console.log('[Auth] Inicializando autenticação...');
+
         // Se Supabase não está configurado, usar apenas localStorage
         if (!isSupabaseConfigured) {
-          console.warn('Supabase não configurado, usando localStorage');
-          const savedUser = localStorage.getItem('user');
-          if (savedUser) {
+          console.warn('[Auth] Supabase não configurado, usando localStorage');
+          const savedUser = localStorage.getItem('briefing-user-data');
+          if (savedUser && mounted) {
             try {
               setUser(JSON.parse(savedUser));
             } catch (e) {
-              localStorage.removeItem('user');
+              localStorage.removeItem('briefing-user-data');
             }
           }
           setLoading(false);
+          setSessionChecked(true);
           return;
         }
 
@@ -29,94 +69,77 @@ export function AuthProvider({ children }) {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
-          console.error('Erro ao obter sessão:', sessionError);
-          throw sessionError;
+          console.error('[Auth] Erro ao obter sessão:', sessionError);
         }
 
-        if (session?.user) {
-          // Buscar perfil do usuário
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          setUser({
-            id: session.user.id,
-            email: session.user.email,
-            name: profile?.name || session.user.email.split('@')[0],
-            role: profile?.role || 'user',
-          });
+        if (session?.user && mounted) {
+          console.log('[Auth] Sessão encontrada:', session.user.email);
+          const userData = await loadUserFromSession(session);
+          if (userData && mounted) {
+            setUser(userData);
+            // Salvar no localStorage como backup
+            localStorage.setItem('briefing-user-data', JSON.stringify(userData));
+          }
         } else {
-          // Fallback: verificar localStorage (compatibilidade)
-          const savedUser = localStorage.getItem('user');
-          if (savedUser) {
+          console.log('[Auth] Nenhuma sessão ativa');
+          // Tentar recuperar do localStorage como fallback
+          const savedUser = localStorage.getItem('briefing-user-data');
+          if (savedUser && mounted) {
             try {
-              setUser(JSON.parse(savedUser));
+              const parsedUser = JSON.parse(savedUser);
+              console.log('[Auth] Usuário recuperado do localStorage:', parsedUser.email);
+              setUser(parsedUser);
             } catch (e) {
-              localStorage.removeItem('user');
+              localStorage.removeItem('briefing-user-data');
             }
           }
         }
       } catch (error) {
-        console.error('Erro ao carregar usuário:', error);
-        // Fallback: verificar localStorage
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) {
-          try {
-            setUser(JSON.parse(savedUser));
-          } catch (e) {
-            localStorage.removeItem('user');
-          }
-        }
+        console.error('[Auth] Erro ao inicializar:', error);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          setSessionChecked(true);
+        }
       }
     };
 
-    loadUser();
+    initializeAuth();
 
-    // Listener para mudanças de autenticação (apenas se Supabase configurado)
+    // Listener para mudanças de autenticação
     let subscription = null;
 
     if (isSupabaseConfigured) {
-      try {
-        const { data } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            if (event === 'SIGNED_IN' && session?.user) {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
+      const { data } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          console.log('[Auth] Estado alterado:', event);
 
-              const userData = {
-                id: session.user.id,
-                email: session.user.email,
-                name: profile?.name || session.user.email.split('@')[0],
-                role: profile?.role || 'user',
-              };
-              setUser(userData);
-              localStorage.setItem('user', JSON.stringify(userData));
-            } else if (event === 'SIGNED_OUT') {
-              setUser(null);
-              localStorage.removeItem('user');
-              localStorage.removeItem('token');
+          if (!mounted) return;
+
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            if (session?.user) {
+              const userData = await loadUserFromSession(session);
+              if (userData && mounted) {
+                setUser(userData);
+                localStorage.setItem('briefing-user-data', JSON.stringify(userData));
+              }
             }
+          } else if (event === 'SIGNED_OUT') {
+            setUser(null);
+            localStorage.removeItem('briefing-user-data');
           }
-        );
-        subscription = data?.subscription;
-      } catch (error) {
-        console.error('Erro ao configurar listener de auth:', error);
-      }
+        }
+      );
+      subscription = data?.subscription;
     }
 
     return () => {
+      mounted = false;
       if (subscription) {
         subscription.unsubscribe();
       }
     };
-  }, []);
+  }, [loadUserFromSession]);
 
   const login = async (email, password) => {
     try {
@@ -127,6 +150,8 @@ export function AuthProvider({ children }) {
         };
       }
 
+      console.log('[Auth] Tentando login:', email);
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -134,27 +159,19 @@ export function AuthProvider({ children }) {
 
       if (error) throw error;
 
-      // Buscar perfil do usuário
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', data.user.id)
-        .single();
+      console.log('[Auth] Login bem-sucedido');
 
-      const userData = {
-        id: data.user.id,
-        email: data.user.email,
-        name: profile?.name || data.user.email.split('@')[0],
-        role: profile?.role || 'user',
-      };
+      // Carregar dados do usuário
+      const userData = await loadUserFromSession(data.session);
 
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('token', data.session.access_token);
+      if (userData) {
+        setUser(userData);
+        localStorage.setItem('briefing-user-data', JSON.stringify(userData));
+      }
 
       return { success: true };
     } catch (error) {
-      console.error('Erro no login:', error);
+      console.error('[Auth] Erro no login:', error);
       return {
         success: false,
         error: error.message || 'Erro ao fazer login',
@@ -170,6 +187,8 @@ export function AuthProvider({ children }) {
           error: 'Supabase não configurado. Configure as variáveis de ambiente.',
         };
       }
+
+      console.log('[Auth] Tentando registrar:', email);
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -190,15 +209,13 @@ export function AuthProvider({ children }) {
         };
 
         setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
-        if (data.session) {
-          localStorage.setItem('token', data.session.access_token);
-        }
+        localStorage.setItem('briefing-user-data', JSON.stringify(userData));
       }
 
+      console.log('[Auth] Registro bem-sucedido');
       return { success: true };
     } catch (error) {
-      console.error('Erro no registro:', error);
+      console.error('[Auth] Erro no registro:', error);
       return {
         success: false,
         error: error.message || 'Erro ao registrar',
@@ -208,15 +225,17 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
+      console.log('[Auth] Fazendo logout...');
       if (isSupabaseConfigured) {
         await supabase.auth.signOut();
       }
     } catch (error) {
-      console.error('Erro no logout:', error);
+      console.error('[Auth] Erro no logout:', error);
     } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      localStorage.removeItem('briefing-user-data');
+      localStorage.removeItem('briefing-auth-token');
       setUser(null);
+      console.log('[Auth] Logout concluído');
     }
   };
 
