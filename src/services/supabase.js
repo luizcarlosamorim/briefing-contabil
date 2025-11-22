@@ -106,15 +106,27 @@ export const briefingsService = {
     return { data }
   },
 
-  // Buscar briefing por protocolo
+  // Buscar briefing por protocolo (acesso público)
   async getByProtocolo(protocolo) {
+    console.log('[Supabase] Buscando protocolo:', protocolo)
+    console.log('[Supabase] Configurado:', isSupabaseConfigured)
+
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase não está configurado. Verifique as variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.')
+    }
+
     const { data, error } = await supabase
       .from('briefings')
       .select('*')
       .eq('protocolo', protocolo)
       .single()
 
-    if (error) throw error
+    console.log('[Supabase] Resultado:', { data: !!data, error: error?.message })
+
+    if (error) {
+      console.error('[Supabase] Erro detalhado:', error)
+      throw error
+    }
     return { data }
   },
 

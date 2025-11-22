@@ -116,12 +116,31 @@ export default function Protocolo() {
   }
 
   if (error) {
+    const isRLSError = error.includes('RLS') || error.includes('Tempo limite') || error.includes('configurado');
+
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-lg w-full text-center">
           <AlertCircle className="mx-auto text-red-500 mb-4" size={64} />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Protocolo não encontrado</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            {isRLSError ? 'Erro de Configuração' : 'Protocolo não encontrado'}
+          </h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+
+          {isRLSError && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-left text-sm">
+              <p className="font-semibold text-yellow-800 mb-2">Possíveis causas:</p>
+              <ul className="list-disc list-inside text-yellow-700 space-y-1">
+                <li>Variáveis de ambiente não configuradas na Vercel</li>
+                <li>Política RLS não permite leitura pública</li>
+                <li>Tabela briefings não existe no Supabase</li>
+              </ul>
+              <p className="mt-3 text-yellow-800">
+                <strong>Dica:</strong> Abra o Console do navegador (F12) para ver logs detalhados.
+              </p>
+            </div>
+          )}
+
           <button
             onClick={() => navigate('/')}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
