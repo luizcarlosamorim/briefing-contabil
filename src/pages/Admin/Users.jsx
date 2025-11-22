@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users as UsersIcon, Plus, Trash2, Edit, Shield, UserX, Search, ArrowLeft, ExternalLink } from 'lucide-react';
+import { Users as UsersIcon, Plus, Trash2, Edit, Shield, Search, ArrowLeft, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../components/ui/Toast';
 import { useModal } from '../../components/ui/Modal';
@@ -58,7 +58,6 @@ export const Users = () => {
         name: u.name || u.email?.split('@')[0] || 'Sem nome',
         email: u.email,
         role: u.role || 'user',
-        isActive: u.is_active !== false,
         createdAt: u.created_at
       }));
       setUsuarios(usuariosFormatados);
@@ -122,9 +121,7 @@ export const Users = () => {
         // Atualizar perfil do usuário no Supabase
         const dataToUpdate = {
           name: formData.name,
-          email: formData.email,
-          role: formData.role,
-          is_active: true
+          role: formData.role
         };
 
         await usersService.update(usuarioEditando.id, dataToUpdate);
@@ -160,23 +157,6 @@ export const Users = () => {
     toast.info('Para remover usuários permanentemente, acesse o Supabase Dashboard.', 'Remoção de usuário');
   };
 
-  const toggleAtivo = async (usuario) => {
-    if (usuario.id === user?.id) {
-      toast.warning('Você não pode desativar seu próprio usuário!', 'Ação não permitida');
-      return;
-    }
-
-    try {
-      await usersService.update(usuario.id, {
-        is_active: !usuario.isActive
-      });
-      toast.success(`Usuário ${usuario.isActive ? 'desativado' : 'ativado'} com sucesso!`, 'Sucesso');
-      carregarUsuarios();
-    } catch (error) {
-      console.error('Erro ao alterar status do usuário:', error);
-      toast.error('Erro ao alterar status do usuário. Tente novamente.', 'Erro');
-    }
-  };
 
   const usuariosFiltrados = usuarios.filter(u =>
     u.name.toLowerCase().includes(filtro.toLowerCase()) ||
@@ -246,7 +226,7 @@ export const Users = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow-sm border p-4">
             <p className="text-sm text-gray-600">Total de Usuários</p>
             <p className="text-3xl font-bold text-gray-900">{usuarios.length}</p>
@@ -261,12 +241,6 @@ export const Users = () => {
             <p className="text-sm text-gray-600">Usuários Comuns</p>
             <p className="text-3xl font-bold text-green-600">
               {usuarios.filter(u => u.role === 'user').length}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm border p-4">
-            <p className="text-sm text-gray-600">Ativos</p>
-            <p className="text-3xl font-bold text-emerald-600">
-              {usuarios.filter(u => u.isActive).length}
             </p>
           </div>
         </div>
@@ -297,9 +271,6 @@ export const Users = () => {
                   Função
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Criado em
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -310,13 +281,13 @@ export const Users = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {usuariosFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan="4" className="px-6 py-12 text-center text-gray-500">
                     {filtro ? 'Nenhum usuário encontrado com este filtro.' : 'Nenhum usuário cadastrado.'}
                   </td>
                 </tr>
               ) : (
                 usuariosFiltrados.map((usuario) => (
-                  <tr key={usuario.id} className={!usuario.isActive ? 'bg-gray-50 opacity-60' : ''}>
+                  <tr key={usuario.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -346,19 +317,6 @@ export const Users = () => {
                           Usuário
                         </span>
                       )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => toggleAtivo(usuario)}
-                        disabled={usuario.id === user?.id}
-                        className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          usuario.isActive
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        } ${usuario.id === user?.id ? 'cursor-not-allowed' : 'cursor-pointer hover:opacity-75'}`}
-                      >
-                        {usuario.isActive ? 'Ativo' : 'Inativo'}
-                      </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(usuario.createdAt).toLocaleDateString('pt-BR')}
