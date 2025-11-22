@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users as UsersIcon, Plus, Trash2, Edit, Shield, UserX, Search, ArrowLeft } from 'lucide-react';
+import { Users as UsersIcon, Plus, Trash2, Edit, Shield, UserX, Search, ArrowLeft, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../components/ui/Toast';
 import { useModal } from '../../components/ui/Modal';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
-import api from '../../services/api';
+import { usersService, isSupabaseConfigured } from '../../services/supabase';
 
 export const Users = () => {
   const { user, isAuthenticated } = useAuth();
@@ -45,11 +45,27 @@ export const Users = () => {
   const carregarUsuarios = async () => {
     setCarregando(true);
     try {
-      const response = await api.get('/users');
-      setUsuarios(response.data);
+      if (!isSupabaseConfigured) {
+        toast.warning('Supabase não está configurado. Configure as variáveis de ambiente.', 'Configuração necessária');
+        setUsuarios([]);
+        return;
+      }
+
+      const response = await usersService.getAll();
+      // Mapear campos do Supabase para o formato esperado
+      const usuariosFormatados = (response.data || []).map(u => ({
+        id: u.id,
+        name: u.name || u.email?.split('@')[0] || 'Sem nome',
+        email: u.email,
+        role: u.role || 'user',
+        isActive: u.is_active !== false,
+        createdAt: u.created_at
+      }));
+      setUsuarios(usuariosFormatados);
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);
-      toast.error('Erro ao carregar usuários. Tente novamente.', 'Erro');
+      toast.error('Erro ao carregar usuários. Verifique se a tabela profiles existe no Supabase.', 'Erro');
+      setUsuarios([]);
     } finally {
       setCarregando(false);
     }
@@ -101,56 +117,27 @@ export const Users = () => {
       return;
     }
 
-    if (!usuarioEditando && (!formData.password || formData.password.length < 6)) {
-      toast.warning('A senha deve ter no mínimo 6 caracteres.', 'Senha inválida');
-      return;
-    }
-
-    if (usuarioEditando && formData.password && formData.password.length > 0 && formData.password.length < 6) {
-      toast.warning('A senha deve ter no mínimo 6 caracteres.', 'Senha inválida');
-      return;
-    }
-
     try {
       if (usuarioEditando) {
-        // Atualizar usuário
-        const dataToUpdate = { ...formData };
-        if (!dataToUpdate.password || dataToUpdate.password.trim() === '') {
-          delete dataToUpdate.password; // Não atualizar senha se vazio
-        }
+        // Atualizar perfil do usuário no Supabase
+        const dataToUpdate = {
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+          is_active: true
+        };
 
-        await api.patch(`/users/${usuarioEditando.id}`, dataToUpdate);
+        await usersService.update(usuarioEditando.id, dataToUpdate);
         toast.success('Usuário atualizado com sucesso!', 'Sucesso');
+        fecharModal();
+        carregarUsuarios();
       } else {
-        // Criar novo usuário
-        await api.post('/users', formData);
-        toast.success('Usuário criado com sucesso!', 'Sucesso');
+        // Para criar novos usuários, usar o Supabase Dashboard
+        toast.info('Para criar novos usuários, acesse o Supabase Dashboard > Authentication > Users', 'Criar usuário');
       }
-
-      fecharModal();
-      carregarUsuarios();
     } catch (error) {
       console.error('Erro ao salvar usuário:', error);
-
-      // Tratamento de erros mais específico
-      if (error.response?.status === 401) {
-        toast.error('Erro de autenticação. Por favor, faça login novamente.', 'Erro de autenticação');
-      } else if (error.response?.status === 403) {
-        toast.error('Você não tem permissão para realizar esta ação.', 'Permissão negada');
-      } else if (error.response?.status === 409) {
-        toast.error('Este e-mail já está cadastrado no sistema. Use outro e-mail.', 'E-mail duplicado');
-      } else if (error.response?.status === 400) {
-        const message = error.response?.data?.message;
-        if (Array.isArray(message)) {
-          toast.error(message.join(', '), 'Erro de validação');
-        } else {
-          toast.error(message || 'Dados inválidos. Verifique os campos e tente novamente.', 'Erro');
-        }
-      } else if (error.response?.data?.message) {
-        toast.error(error.response.data.message, 'Erro');
-      } else {
-        toast.error('Erro ao salvar usuário. Verifique sua conexão e tente novamente.', 'Erro');
-      }
+      toast.error(error.message || 'Erro ao salvar usuário. Tente novamente.', 'Erro');
     }
   };
 
@@ -168,14 +155,9 @@ export const Users = () => {
 
     if (!confirmar) return;
 
-    try {
-      await api.delete(`/users/${id}`);
-      toast.success('Usuário removido com sucesso!', 'Sucesso');
-      carregarUsuarios();
-    } catch (error) {
-      console.error('Erro ao remover usuário:', error);
-      toast.error('Erro ao remover usuário. Tente novamente.', 'Erro');
-    }
+    // No Supabase, remover usuários deve ser feito pelo Dashboard
+    // Aqui apenas desativamos o usuário
+    toast.info('Para remover usuários permanentemente, acesse o Supabase Dashboard.', 'Remoção de usuário');
   };
 
   const toggleAtivo = async (usuario) => {
@@ -185,8 +167,8 @@ export const Users = () => {
     }
 
     try {
-      await api.patch(`/users/${usuario.id}`, {
-        isActive: !usuario.isActive
+      await usersService.update(usuario.id, {
+        is_active: !usuario.isActive
       });
       toast.success(`Usuário ${usuario.isActive ? 'desativado' : 'ativado'} com sucesso!`, 'Sucesso');
       carregarUsuarios();
@@ -236,13 +218,31 @@ export const Users = () => {
             </div>
           </div>
 
-          <Button
-            variant="primary"
-            icon={Plus}
-            onClick={() => abrirModal()}
-          >
-            Novo Usuário
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              icon={ExternalLink}
+              onClick={() => window.open('https://supabase.com/dashboard', '_blank')}
+            >
+              Supabase Dashboard
+            </Button>
+            <Button
+              variant="primary"
+              icon={Plus}
+              onClick={() => abrirModal()}
+            >
+              Editar Perfil
+            </Button>
+          </div>
+        </div>
+
+        {/* Info Banner */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <p className="text-sm text-blue-800">
+            <strong>Nota:</strong> O gerenciamento de usuários é feito através do Supabase.
+            Para criar novos usuários, acesse o <strong>Supabase Dashboard</strong> {">"} Authentication {">"} Users.
+            Aqui você pode visualizar e editar os perfis dos usuários existentes.
+          </p>
         </div>
 
         {/* Stats */}
