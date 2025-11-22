@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Upload, File, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
 import { useBriefing } from '../../../../contexts/BriefingContext';
+import { useModal } from '../../../ui/Modal';
 import { Button } from '../../../common/Button';
 
 export const Documentos = () => {
   const { dados, setDados, proximaEtapa, etapaAnterior } = useBriefing();
+  const modal = useModal();
   const [uploadando, setUploadando] = useState(false);
   const [erro, setErro] = useState(null);
 
@@ -91,8 +93,14 @@ export const Documentos = () => {
     }
   };
 
-  const removerDocumento = (id) => {
-    if (window.confirm('Deseja realmente remover este documento?')) {
+  const removerDocumento = async (id) => {
+    const confirmar = await modal.danger(
+      'Remover documento',
+      'Deseja realmente remover este documento? Esta ação não pode ser desfeita.',
+      { confirmText: 'Remover', cancelText: 'Cancelar' }
+    );
+
+    if (confirmar) {
       setDados(prev => ({
         ...prev,
         documentos: prev.documentos.filter(doc => doc.id !== id)
@@ -112,7 +120,7 @@ export const Documentos = () => {
     return (dados.documentos || []).filter(doc => doc.tipoDocumento === tipo);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Verificar se documentos obrigatórios foram enviados
@@ -122,10 +130,10 @@ export const Documentos = () => {
     );
 
     if (faltantes.length > 0) {
-      const continuar = window.confirm(
-        `Os seguintes documentos obrigatórios não foram enviados:\n\n` +
-        `${faltantes.map(d => `- ${d.nome}`).join('\n')}\n\n` +
-        `Deseja continuar mesmo assim?`
+      const continuar = await modal.warning(
+        'Documentos faltantes',
+        `Os seguintes documentos obrigatórios não foram enviados:\n\n${faltantes.map(d => `• ${d.nome}`).join('\n')}\n\nDeseja continuar mesmo assim?`,
+        { confirmText: 'Continuar', cancelText: 'Voltar' }
       );
 
       if (!continuar) return;

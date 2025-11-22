@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, Save, CheckCircle, ExternalLink, Loader } from 'lucide-react';
 import { useBriefing } from '../../../../contexts/BriefingContext';
 import { useAuth } from '../../../../hooks/useAuth';
+import { useToast } from '../../../ui/Toast';
 import { Button } from '../../../common/Button';
 import { tiposEntidade } from '../../../../constants/briefingData';
 import { briefingsService } from '../../../../services/supabase';
@@ -10,6 +11,7 @@ import { briefingsService } from '../../../../services/supabase';
 export const RevisaoFinal = () => {
   const { dados, tipoEntidade, etapaAnterior, salvarProgresso } = useBriefing();
   const { user, isAuthenticated } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
   const [salvando, setSalvando] = useState(false);
   const [protocolo, setProtocolo] = useState(null);
@@ -149,7 +151,10 @@ Sistema: Briefing Contábil v2.0
 
       setProtocolo(briefingSalvo.protocolo);
 
-      alert(`✅ Briefing salvo com sucesso!\n\nPROTOCOLO: ${briefingSalvo.protocolo}\n\nVocê pode acessar seu briefing através do link que será exibido.`);
+      toast.success(
+        `Protocolo: ${briefingSalvo.protocolo}\n\nVocê pode acessar seu briefing através do link que será exibido.`,
+        'Briefing salvo com sucesso!'
+      );
 
       return briefingSalvo;
     } catch (error) {
@@ -157,7 +162,10 @@ Sistema: Briefing Contábil v2.0
       console.error('[DEBUG] Detalhes do erro:', error.message);
 
       const mensagemErro = error.message || 'Erro desconhecido';
-      alert(`❌ Erro ao salvar briefing.\n\nDetalhes: ${mensagemErro}\n\nVerifique o console para mais informações.`);
+      toast.error(
+        `${mensagemErro}\n\nVerifique o console para mais informações.`,
+        'Erro ao salvar briefing'
+      );
       return null;
     } finally {
       setSalvando(false);
@@ -167,9 +175,9 @@ Sistema: Briefing Contábil v2.0
   const handleSalvar = () => {
     const sucesso = salvarProgresso();
     if (sucesso) {
-      alert('✅ Progresso salvo localmente com sucesso!');
+      toast.success('Seu progresso foi salvo e pode ser recuperado mais tarde.', 'Progresso salvo!');
     } else {
-      alert('❌ Erro ao salvar progresso. Tente novamente.');
+      toast.error('Não foi possível salvar o progresso. Tente novamente.', 'Erro ao salvar');
     }
   };
 

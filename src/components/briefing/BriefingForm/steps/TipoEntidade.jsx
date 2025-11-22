@@ -1,11 +1,13 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useBriefing } from '../../../../contexts/BriefingContext';
+import { useToast } from '../../../ui/Toast';
 import { Button } from '../../../common/Button';
 import { tiposEntidade } from '../../../../constants/briefingData';
 
 export const TipoEntidade = () => {
   const { dados, setDados, tipoEntidade, setTipoEntidade, proximaEtapa, etapaAnterior } = useBriefing();
+  const toast = useToast();
 
   const handleSelectTipo = (tipo) => {
     setTipoEntidade(tipo);
@@ -17,7 +19,7 @@ export const TipoEntidade = () => {
 
   const handleContinuar = () => {
     if (!tipoEntidade) {
-      alert('Por favor, selecione um tipo de entidade');
+      toast.warning('Por favor, selecione um tipo de entidade antes de continuar.', 'Seleção necessária');
       return;
     }
     proximaEtapa();

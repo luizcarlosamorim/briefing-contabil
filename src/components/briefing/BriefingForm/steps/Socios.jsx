@@ -1,12 +1,14 @@
 import React from 'react';
 import { ArrowLeft, Plus, Trash2, User } from 'lucide-react';
 import { useBriefing } from '../../../../contexts/BriefingContext';
+import { useModal } from '../../../ui/Modal';
 import { Input, Select } from '../../../common/Input';
 import { Button } from '../../../common/Button';
 import { estadosBrasileiros, qualificacoesSocio } from '../../../../constants/briefingData';
 
 export const Socios = () => {
   const { dados, adicionarSocio, atualizarSocio, removerSocio, proximaEtapa, etapaAnterior } = useBriefing();
+  const modal = useModal();
 
   const handleSocioChange = (socioId, campo, valor) => {
     atualizarSocio(socioId, campo, valor);
@@ -20,13 +22,14 @@ export const Socios = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (dados.socios.length === 0) {
-      const continuar = window.confirm(
-        'Você não adicionou nenhum sócio/instituidor.\n\n' +
-        'Deseja continuar mesmo assim?'
+      const continuar = await modal.warning(
+        'Nenhum sócio adicionado',
+        'Você não adicionou nenhum sócio/instituidor.\n\nDeseja continuar mesmo assim?',
+        { confirmText: 'Continuar', cancelText: 'Voltar' }
       );
       if (!continuar) return;
     }
@@ -77,7 +80,14 @@ export const Socios = () => {
                   </h4>
                   <Button
                     type="button"
-                    onClick={() => removerSocio(socio.id)}
+                    onClick={async () => {
+                      const confirmar = await modal.danger(
+                        'Remover sócio',
+                        `Deseja realmente remover "${socio.nome || 'este sócio'}"? Esta ação não pode ser desfeita.`,
+                        { confirmText: 'Remover', cancelText: 'Cancelar' }
+                      );
+                      if (confirmar) removerSocio(socio.id);
+                    }}
                     variant="danger"
                     icon={Trash2}
                   >

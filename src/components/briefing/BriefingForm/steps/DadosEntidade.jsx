@@ -3,6 +3,8 @@ import { ArrowLeft, Search, Building, MapPin } from 'lucide-react';
 import { useBriefing } from '../../../../contexts/BriefingContext';
 import { useCNPJ } from '../../../../hooks/useCNPJ';
 import { useCEP } from '../../../../hooks/useCEP';
+import { useModal } from '../../../ui/Modal';
+import { useToast } from '../../../ui/Toast';
 import { Input, Select, Textarea } from '../../../common/Input';
 import { Button } from '../../../common/Button';
 import { InlineLoading } from '../../../common/Loading';
@@ -10,8 +12,10 @@ import { estadosBrasileiros, tiposImovel } from '../../../../constants/briefingD
 
 export const DadosEntidade = () => {
   const { dados, setDados, atualizarDados, proximaEtapa, etapaAnterior } = useBriefing();
-  const { buscandoCNPJ, erro, buscarDadosCNPJ, limparErro } = useCNPJ();
+  const { buscandoCNPJ, erro, buscarDadosCNPJ, preencherDadosCNPJ, importarSocios, criarResumo, limparErro } = useCNPJ();
   const { buscandoCEP, erro: erroCEP, buscarDadosCEP, limparErro: limparErroCEP } = useCEP();
+  const modal = useModal();
+  const toast = useToast();
   const [cnpjBusca, setCnpjBusca] = React.useState('');
 
   const handleChange = (campo, valor) => {
@@ -26,8 +30,38 @@ export const DadosEntidade = () => {
   };
 
   const handleBuscarCNPJ = async () => {
-    if (cnpjBusca.trim()) {
-      await buscarDadosCNPJ(cnpjBusca);
+    if (!cnpjBusca.trim()) return;
+
+    const dadosCNPJ = await buscarDadosCNPJ(cnpjBusca);
+
+    if (dadosCNPJ) {
+      // Criar resumo formatado para exibição
+      const resumoTexto = `Razão Social: ${dadosCNPJ.nome}\n${dadosCNPJ.fantasia ? `Nome Fantasia: ${dadosCNPJ.fantasia}\n` : ''}CNPJ: ${dadosCNPJ.cnpj}\nSituação: ${dadosCNPJ.situacao}\n\nEndereço:\n${dadosCNPJ.logradouro}, ${dadosCNPJ.numero}\n${dadosCNPJ.bairro} - ${dadosCNPJ.municipio}/${dadosCNPJ.uf}\nCEP: ${dadosCNPJ.cep}`;
+
+      const confirmar = await modal.confirm(
+        'CNPJ Encontrado',
+        `${resumoTexto}\n\nDeseja preencher automaticamente o formulário com estes dados?`,
+        { confirmText: 'Preencher', cancelText: 'Cancelar' }
+      );
+
+      if (confirmar) {
+        preencherDadosCNPJ(dadosCNPJ);
+        toast.success('Dados do CNPJ preenchidos com sucesso!', 'Dados importados');
+
+        // Verificar se há sócios para importar
+        if (dadosCNPJ.qsa && dadosCNPJ.qsa.length > 0) {
+          const confirmarSocios = await modal.confirm(
+            'Importar Sócios',
+            `Foram encontrados ${dadosCNPJ.qsa.length} sócio(s) no Quadro de Sócios e Administradores.\n\nDeseja importá-los automaticamente?`,
+            { confirmText: 'Importar', cancelText: 'Não' }
+          );
+
+          if (confirmarSocios) {
+            importarSocios(dadosCNPJ);
+            toast.success(`${dadosCNPJ.qsa.length} sócio(s) importado(s) com sucesso!`, 'Sócios importados');
+          }
+        }
+      }
     }
   };
 

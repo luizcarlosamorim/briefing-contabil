@@ -98,12 +98,11 @@ export const BriefingProvider = ({ children }) => {
   };
 
   const removerSocio = (id) => {
-    if (window.confirm('Deseja realmente remover este sócio?')) {
-      setDados(prev => ({
-        ...prev,
-        socios: prev.socios.filter(socio => socio.id !== id)
-      }));
-    }
+    // Confirmação removida - deve ser feita no componente usando useModal
+    setDados(prev => ({
+      ...prev,
+      socios: prev.socios.filter(socio => socio.id !== id)
+    }));
   };
 
   // Navegação entre etapas

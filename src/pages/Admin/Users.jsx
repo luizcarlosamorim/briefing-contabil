@@ -2,12 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users as UsersIcon, Plus, Trash2, Edit, Shield, UserX, Search, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../components/ui/Toast';
+import { useModal } from '../../components/ui/Modal';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import api from '../../services/api';
 
 export const Users = () => {
   const { user, isAuthenticated } = useAuth();
+  const toast = useToast();
+  const modal = useModal();
   const navigate = useNavigate();
   const [usuarios, setUsuarios] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -30,7 +34,7 @@ export const Users = () => {
     }
 
     if (user?.role !== 'admin') {
-      alert('Acesso negado. Apenas administradores podem acessar esta página.');
+      toast.error('Apenas administradores podem acessar esta página.', 'Acesso negado');
       navigate('/');
       return;
     }
@@ -45,7 +49,7 @@ export const Users = () => {
       setUsuarios(response.data);
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);
-      alert('Erro ao carregar usuários. Tente novamente.');
+      toast.error('Erro ao carregar usuários. Tente novamente.', 'Erro');
     } finally {
       setCarregando(false);
     }
@@ -88,22 +92,22 @@ export const Users = () => {
 
     // Validações básicas
     if (!formData.name || formData.name.trim() === '') {
-      alert('Por favor, preencha o nome do usuário.');
+      toast.warning('Por favor, preencha o nome do usuário.', 'Campo obrigatório');
       return;
     }
 
     if (!formData.email || formData.email.trim() === '') {
-      alert('Por favor, preencha o e-mail do usuário.');
+      toast.warning('Por favor, preencha o e-mail do usuário.', 'Campo obrigatório');
       return;
     }
 
     if (!usuarioEditando && (!formData.password || formData.password.length < 6)) {
-      alert('A senha deve ter no mínimo 6 caracteres.');
+      toast.warning('A senha deve ter no mínimo 6 caracteres.', 'Senha inválida');
       return;
     }
 
     if (usuarioEditando && formData.password && formData.password.length > 0 && formData.password.length < 6) {
-      alert('A senha deve ter no mínimo 6 caracteres.');
+      toast.warning('A senha deve ter no mínimo 6 caracteres.', 'Senha inválida');
       return;
     }
 
@@ -116,11 +120,11 @@ export const Users = () => {
         }
 
         await api.patch(`/users/${usuarioEditando.id}`, dataToUpdate);
-        alert('✅ Usuário atualizado com sucesso!');
+        toast.success('Usuário atualizado com sucesso!', 'Sucesso');
       } else {
         // Criar novo usuário
         await api.post('/users', formData);
-        alert('✅ Usuário criado com sucesso!');
+        toast.success('Usuário criado com sucesso!', 'Sucesso');
       }
 
       fecharModal();
@@ -130,49 +134,53 @@ export const Users = () => {
 
       // Tratamento de erros mais específico
       if (error.response?.status === 401) {
-        alert('❌ Erro de autenticação. Por favor, faça login novamente.');
+        toast.error('Erro de autenticação. Por favor, faça login novamente.', 'Erro de autenticação');
       } else if (error.response?.status === 403) {
-        alert('❌ Você não tem permissão para realizar esta ação.');
+        toast.error('Você não tem permissão para realizar esta ação.', 'Permissão negada');
       } else if (error.response?.status === 409) {
-        alert('❌ Este e-mail já está cadastrado no sistema. Use outro e-mail.');
+        toast.error('Este e-mail já está cadastrado no sistema. Use outro e-mail.', 'E-mail duplicado');
       } else if (error.response?.status === 400) {
         const message = error.response?.data?.message;
         if (Array.isArray(message)) {
-          alert(`❌ Erro de validação:\n${message.join('\n')}`);
+          toast.error(message.join(', '), 'Erro de validação');
         } else {
-          alert(`❌ ${message || 'Dados inválidos. Verifique os campos e tente novamente.'}`);
+          toast.error(message || 'Dados inválidos. Verifique os campos e tente novamente.', 'Erro');
         }
       } else if (error.response?.data?.message) {
-        alert(`❌ ${error.response.data.message}`);
+        toast.error(error.response.data.message, 'Erro');
       } else {
-        alert('❌ Erro ao salvar usuário. Verifique sua conexão e tente novamente.');
+        toast.error('Erro ao salvar usuário. Verifique sua conexão e tente novamente.', 'Erro');
       }
     }
   };
 
   const removerUsuario = async (id) => {
     if (id === user?.id) {
-      alert('Você não pode remover seu próprio usuário!');
+      toast.warning('Você não pode remover seu próprio usuário!', 'Ação não permitida');
       return;
     }
 
-    if (!window.confirm('Tem certeza que deseja remover este usuário? Esta ação não pode ser desfeita.')) {
-      return;
-    }
+    const confirmar = await modal.danger(
+      'Remover usuário',
+      'Tem certeza que deseja remover este usuário? Esta ação não pode ser desfeita.',
+      { confirmText: 'Remover', cancelText: 'Cancelar' }
+    );
+
+    if (!confirmar) return;
 
     try {
       await api.delete(`/users/${id}`);
-      alert('Usuário removido com sucesso!');
+      toast.success('Usuário removido com sucesso!', 'Sucesso');
       carregarUsuarios();
     } catch (error) {
       console.error('Erro ao remover usuário:', error);
-      alert('Erro ao remover usuário. Tente novamente.');
+      toast.error('Erro ao remover usuário. Tente novamente.', 'Erro');
     }
   };
 
   const toggleAtivo = async (usuario) => {
     if (usuario.id === user?.id) {
-      alert('Você não pode desativar seu próprio usuário!');
+      toast.warning('Você não pode desativar seu próprio usuário!', 'Ação não permitida');
       return;
     }
 
@@ -180,11 +188,11 @@ export const Users = () => {
       await api.patch(`/users/${usuario.id}`, {
         isActive: !usuario.isActive
       });
-      alert(`Usuário ${usuario.isActive ? 'desativado' : 'ativado'} com sucesso!`);
+      toast.success(`Usuário ${usuario.isActive ? 'desativado' : 'ativado'} com sucesso!`, 'Sucesso');
       carregarUsuarios();
     } catch (error) {
       console.error('Erro ao alterar status do usuário:', error);
-      alert('Erro ao alterar status do usuário. Tente novamente.');
+      toast.error('Erro ao alterar status do usuário. Tente novamente.', 'Erro');
     }
   };
 

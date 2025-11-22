@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FileText, Building2, Users, CheckCircle, Download, Upload } from 'lucide-react';
 import { useBriefing } from '../../../contexts/BriefingContext';
+import { useModal } from '../../ui/Modal';
 import { DadosGerais } from './steps/DadosGerais';
 import { TipoEntidade } from './steps/TipoEntidade';
 import { DadosEntidade } from './steps/DadosEntidade';
@@ -21,20 +22,31 @@ const ETAPAS_CONFIG = [
 
 export const BriefingForm = () => {
   const { etapaAtual, irParaEtapa, carregarProgresso } = useBriefing();
+  const modal = useModal();
+  const [progressoVerificado, setProgressoVerificado] = useState(false);
 
   // Carregar progresso salvo ao montar o componente
   useEffect(() => {
-    const progressoCarregado = carregarProgresso();
-    if (progressoCarregado) {
-      const confirmar = window.confirm(
-        'Encontramos um briefing salvo anteriormente.\n\nDeseja continuar de onde parou?'
-      );
-      if (!confirmar) {
-        // Se não quiser continuar, limpa o localStorage
-        localStorage.removeItem('briefing_progresso');
+    const verificarProgresso = async () => {
+      if (progressoVerificado) return;
+
+      const progressoCarregado = carregarProgresso();
+      if (progressoCarregado) {
+        const confirmar = await modal.confirm(
+          'Briefing encontrado',
+          'Encontramos um briefing salvo anteriormente.\n\nDeseja continuar de onde parou?',
+          { confirmText: 'Continuar', cancelText: 'Começar novo' }
+        );
+        if (!confirmar) {
+          // Se não quiser continuar, limpa o localStorage
+          localStorage.removeItem('briefing_progresso');
+        }
       }
-    }
-  }, []);
+      setProgressoVerificado(true);
+    };
+
+    verificarProgresso();
+  }, [progressoVerificado]);
 
   const EtapaAtualComponent = ETAPAS_CONFIG[etapaAtual]?.component;
 

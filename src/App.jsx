@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { BriefingProvider } from './contexts/BriefingContext';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { ToastProvider } from './components/ui/Toast';
+import { ModalProvider } from './components/ui/Modal';
 import { BriefingForm } from './components/briefing/BriefingForm/BriefingForm';
 import Login from './admin/Login';
 import Dashboard from './admin/Dashboard';
@@ -25,38 +27,42 @@ function ProtectedRoute({ children }) {
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <BriefingProvider>
-                <BriefingForm />
-              </BriefingProvider>
-            }
-          />
-          <Route path="/admin" element={<Login />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              <ProtectedRoute>
-                <Users />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/protocolo/:numero" element={<Protocolo />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <ToastProvider>
+      <ModalProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <BriefingProvider>
+                    <BriefingForm />
+                  </BriefingProvider>
+                }
+              />
+              <Route path="/admin" element={<Login />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/users"
+                element={
+                  <ProtectedRoute>
+                    <Users />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/protocolo/:numero" element={<Protocolo />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </ModalProvider>
+    </ToastProvider>
   );
 }
 

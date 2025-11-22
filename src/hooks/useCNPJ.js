@@ -8,6 +8,8 @@ export const useCNPJ = () => {
   const [erro, setErro] = useState(null);
   const { setDados } = useBriefing();
 
+  // Busca CNPJ e retorna os dados sem preencher automaticamente
+  // O componente deve chamar preencherDadosCNPJ e importarSocios conforme necessário
   const buscarDadosCNPJ = async (cnpj) => {
     if (!validarCNPJ(cnpj)) {
       setErro('CNPJ inválido. Digite um CNPJ válido com 14 dígitos.');
@@ -24,14 +26,6 @@ export const useCNPJ = () => {
 
       console.log('✅ CNPJ encontrado:', dadosCNPJ.nome);
       setCnpjEncontrado(dadosCNPJ);
-
-      // Criar resumo para confirmação
-      const resumo = criarResumo(dadosCNPJ);
-      const confirmacao = window.confirm(resumo);
-
-      if (confirmacao) {
-        preencherDadosCNPJ(dadosCNPJ);
-      }
 
       return dadosCNPJ;
     } catch (error) {
@@ -73,6 +67,7 @@ Deseja preencher automaticamente o formulário com estes dados?
     return resumo;
   };
 
+  // Preenche os dados do formulário com os dados do CNPJ
   const preencherDadosCNPJ = (dadosCNPJ) => {
     setDados(prev => ({
       ...prev,
@@ -93,42 +88,38 @@ Deseja preencher automaticamente o formulário com estes dados?
         nomeCliente: dadosCNPJ.nome || dadosCNPJ.fantasia || prev.dadosGerais.nomeCliente,
         email: dadosCNPJ.email || prev.dadosGerais.email,
         telefone: dadosCNPJ.telefone || prev.dadosGerais.telefone
-      },
-      // Salvar dados completos da Infosimples
-      dadosInfosimples: dadosCNPJ
+      }
+    }));
+  };
+
+  // Importa os sócios do QSA para o formulário
+  const importarSocios = (dadosCNPJ) => {
+    if (!dadosCNPJ?.qsa || dadosCNPJ.qsa.length === 0) return [];
+
+    const sociosImportados = dadosCNPJ.qsa.map((socio, index) => ({
+      id: Date.now() + index,
+      nome: socio.nome_socio || socio.nome,
+      cpfCnpj: socio.cpf_cnpj_socio || '',
+      percentual: '',
+      qualificacao: socio.qualificacao_socio || socio.qualificacao || '',
+      email: '',
+      telefone: '',
+      endereco: {
+        logradouro: '',
+        numero: '',
+        bairro: '',
+        cidade: '',
+        uf: '',
+        cep: ''
+      }
     }));
 
-    // Se houver QSA, sugerir importação de sócios
-    if (dadosCNPJ.qsa && dadosCNPJ.qsa.length > 0) {
-      const importarSocios = window.confirm(
-        `Foram encontrados ${dadosCNPJ.qsa.length} sócio(s) no Quadro de Sócios e Administradores.\n\nDeseja importá-los automaticamente?`
-      );
+    setDados(prev => ({
+      ...prev,
+      socios: sociosImportados
+    }));
 
-      if (importarSocios) {
-        const sociosImportados = dadosCNPJ.qsa.map((socio, index) => ({
-          id: Date.now() + index,
-          nome: socio.nome_socio || socio.nome,
-          cpfCnpj: socio.cpf_cnpj_socio || '',
-          percentual: '',
-          qualificacao: socio.qualificacao_socio || socio.qualificacao || '',
-          email: '',
-          telefone: '',
-          endereco: {
-            logradouro: '',
-            numero: '',
-            bairro: '',
-            cidade: '',
-            uf: '',
-            cep: ''
-          }
-        }));
-
-        setDados(prev => ({
-          ...prev,
-          socios: sociosImportados
-        }));
-      }
-    }
+    return sociosImportados;
   };
 
   const limparErro = () => {
@@ -140,6 +131,9 @@ Deseja preencher automaticamente o formulário com estes dados?
     cnpjEncontrado,
     erro,
     buscarDadosCNPJ,
+    preencherDadosCNPJ,
+    importarSocios,
+    criarResumo,
     limparErro
   };
 };
