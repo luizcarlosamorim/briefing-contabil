@@ -1,15 +1,22 @@
-import { useState, useEffect, createContext, useContext, useCallback } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 
 const AuthContext = createContext({});
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    // Inicializar com dados do localStorage para evitar flash de loading
+    try {
+      const saved = localStorage.getItem('briefing-user-data');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
-  const [sessionChecked, setSessionChecked] = useState(false);
 
   // Função para carregar dados do usuário a partir da sessão
-  const loadUserFromSession = useCallback(async (session) => {
+  const loadUserFromSession = async (session) => {
     if (!session?.user) {
       return null;
     }
@@ -22,16 +29,13 @@ export function AuthProvider({ children }) {
         .eq('id', session.user.id)
         .single();
 
-      const userData = {
+      return {
         id: session.user.id,
         email: session.user.email,
         name: profile?.name || session.user.user_metadata?.name || session.user.email.split('@')[0],
         role: profile?.role || session.user.user_metadata?.role || 'user',
       };
-
-      return userData;
     } catch (error) {
-      console.error('Erro ao buscar perfil:', error);
       // Retorna dados básicos mesmo se não conseguir buscar o perfil
       return {
         id: session.user.id,
@@ -40,66 +44,45 @@ export function AuthProvider({ children }) {
         role: session.user.user_metadata?.role || 'user',
       };
     }
-  }, []);
+  };
 
   useEffect(() => {
     let mounted = true;
 
     const initializeAuth = async () => {
-      try {
-        console.log('[Auth] Inicializando autenticação...');
+      // Timeout de segurança - nunca ficar em loading mais de 5 segundos
+      const timeoutId = setTimeout(() => {
+        if (mounted) {
+          console.warn('[Auth] Timeout - finalizando loading');
+          setLoading(false);
+        }
+      }, 5000);
 
+      try {
         // Se Supabase não está configurado, usar apenas localStorage
         if (!isSupabaseConfigured) {
-          console.warn('[Auth] Supabase não configurado, usando localStorage');
-          const savedUser = localStorage.getItem('briefing-user-data');
-          if (savedUser && mounted) {
-            try {
-              setUser(JSON.parse(savedUser));
-            } catch (e) {
-              localStorage.removeItem('briefing-user-data');
-            }
-          }
-          setLoading(false);
-          setSessionChecked(true);
+          console.warn('[Auth] Supabase não configurado');
+          if (mounted) setLoading(false);
+          clearTimeout(timeoutId);
           return;
         }
 
         // Verificar se há sessão ativa no Supabase
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-        if (sessionError) {
-          console.error('[Auth] Erro ao obter sessão:', sessionError);
-        }
+        const { data: { session } } = await supabase.auth.getSession();
 
         if (session?.user && mounted) {
-          console.log('[Auth] Sessão encontrada:', session.user.email);
           const userData = await loadUserFromSession(session);
           if (userData && mounted) {
             setUser(userData);
-            // Salvar no localStorage como backup
             localStorage.setItem('briefing-user-data', JSON.stringify(userData));
-          }
-        } else {
-          console.log('[Auth] Nenhuma sessão ativa');
-          // Tentar recuperar do localStorage como fallback
-          const savedUser = localStorage.getItem('briefing-user-data');
-          if (savedUser && mounted) {
-            try {
-              const parsedUser = JSON.parse(savedUser);
-              console.log('[Auth] Usuário recuperado do localStorage:', parsedUser.email);
-              setUser(parsedUser);
-            } catch (e) {
-              localStorage.removeItem('briefing-user-data');
-            }
           }
         }
       } catch (error) {
         console.error('[Auth] Erro ao inicializar:', error);
       } finally {
+        clearTimeout(timeoutId);
         if (mounted) {
           setLoading(false);
-          setSessionChecked(true);
         }
       }
     };
@@ -110,26 +93,22 @@ export function AuthProvider({ children }) {
     let subscription = null;
 
     if (isSupabaseConfigured) {
-      const { data } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          console.log('[Auth] Estado alterado:', event);
+      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (!mounted) return;
 
-          if (!mounted) return;
-
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-            if (session?.user) {
-              const userData = await loadUserFromSession(session);
-              if (userData && mounted) {
-                setUser(userData);
-                localStorage.setItem('briefing-user-data', JSON.stringify(userData));
-              }
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (session?.user) {
+            const userData = await loadUserFromSession(session);
+            if (userData && mounted) {
+              setUser(userData);
+              localStorage.setItem('briefing-user-data', JSON.stringify(userData));
             }
-          } else if (event === 'SIGNED_OUT') {
-            setUser(null);
-            localStorage.removeItem('briefing-user-data');
           }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          localStorage.removeItem('briefing-user-data');
         }
-      );
+      });
       subscription = data?.subscription;
     }
 
@@ -139,7 +118,7 @@ export function AuthProvider({ children }) {
         subscription.unsubscribe();
       }
     };
-  }, [loadUserFromSession]);
+  }, []);
 
   const login = async (email, password) => {
     try {
@@ -150,16 +129,12 @@ export function AuthProvider({ children }) {
         };
       }
 
-      console.log('[Auth] Tentando login:', email);
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
-
-      console.log('[Auth] Login bem-sucedido');
 
       // Carregar dados do usuário
       const userData = await loadUserFromSession(data.session);
@@ -188,8 +163,6 @@ export function AuthProvider({ children }) {
         };
       }
 
-      console.log('[Auth] Tentando registrar:', email);
-
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -212,7 +185,6 @@ export function AuthProvider({ children }) {
         localStorage.setItem('briefing-user-data', JSON.stringify(userData));
       }
 
-      console.log('[Auth] Registro bem-sucedido');
       return { success: true };
     } catch (error) {
       console.error('[Auth] Erro no registro:', error);
@@ -225,7 +197,6 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      console.log('[Auth] Fazendo logout...');
       if (isSupabaseConfigured) {
         await supabase.auth.signOut();
       }
@@ -233,9 +204,7 @@ export function AuthProvider({ children }) {
       console.error('[Auth] Erro no logout:', error);
     } finally {
       localStorage.removeItem('briefing-user-data');
-      localStorage.removeItem('briefing-auth-token');
       setUser(null);
-      console.log('[Auth] Logout concluído');
     }
   };
 
