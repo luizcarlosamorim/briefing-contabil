@@ -2,14 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FileText, User, Mail, Phone, Building, MapPin, Users, Calendar, CheckCircle, AlertCircle, ArrowLeft, Download, Copy, Check } from 'lucide-react';
 import { briefingsService } from '../services/supabase';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Protocolo() {
   const { numero } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [briefing, setBriefing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [copiado, setCopiado] = useState(false);
+
+  // Função para voltar - dashboard se logado, página inicial se não
+  const handleVoltar = () => {
+    navigate(isAuthenticated ? '/dashboard' : '/');
+  };
 
   const copiarURL = async () => {
     const url = window.location.href;
@@ -142,7 +149,7 @@ export default function Protocolo() {
           )}
 
           <button
-            onClick={() => navigate('/')}
+            onClick={handleVoltar}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Voltar ao início
@@ -167,7 +174,7 @@ export default function Protocolo() {
             </div>
             <div className="flex gap-2 print:hidden">
               <button
-                onClick={() => navigate('/')}
+                onClick={handleVoltar}
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 <ArrowLeft size={18} />
