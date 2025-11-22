@@ -32,9 +32,22 @@ export default function Protocolo() {
 
   useEffect(() => {
     const buscarBriefing = async () => {
+      // Timeout de 10 segundos para não ficar carregando eternamente
+      const timeoutId = setTimeout(() => {
+        setError('Tempo limite excedido. Verifique se as políticas RLS do Supabase permitem leitura pública da tabela briefings.');
+        setLoading(false);
+      }, 10000);
+
       try {
         setLoading(true);
+        console.log('[Protocolo] Buscando briefing:', numero);
         const response = await briefingsService.getByProtocolo(numero);
+        clearTimeout(timeoutId);
+
+        if (!response.data) {
+          throw new Error('Briefing não encontrado');
+        }
+
         // Converter snake_case para camelCase
         const b = response.data;
         const briefingFormatado = {
@@ -60,9 +73,19 @@ export default function Protocolo() {
           createdAt: b.created_at
         };
         setBriefing(briefingFormatado);
+        console.log('[Protocolo] Briefing carregado com sucesso');
       } catch (err) {
-        console.error('Erro ao buscar protocolo:', err);
-        setError(err.message || 'Protocolo não encontrado');
+        clearTimeout(timeoutId);
+        console.error('[Protocolo] Erro ao buscar:', err);
+
+        // Mensagem de erro mais informativa
+        let mensagemErro = 'Protocolo não encontrado';
+        if (err.message?.includes('permission denied') || err.message?.includes('RLS')) {
+          mensagemErro = 'Acesso negado. Configure as políticas RLS no Supabase para permitir leitura pública.';
+        } else if (err.message) {
+          mensagemErro = err.message;
+        }
+        setError(mensagemErro);
       } finally {
         setLoading(false);
       }
