@@ -183,7 +183,7 @@ export const Users = () => {
             <Button
               variant="secondary"
               icon={ArrowLeft}
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/dashboard')}
             >
               Voltar
             </Button>
