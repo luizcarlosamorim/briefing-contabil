@@ -68,17 +68,35 @@ export function AuthProvider({ children }) {
         }
 
         // Verificar se há sessão ativa no Supabase
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (session?.user && mounted) {
+        if (sessionError) {
+          console.error('[Auth] Erro ao obter sessão:', sessionError);
+          // Se houve erro, limpar dados locais por segurança
+          if (mounted) {
+            setUser(null);
+            localStorage.removeItem('briefing-user-data');
+          }
+        } else if (session?.user && mounted) {
+          // Sessão válida - atualizar dados do usuário
           const userData = await loadUserFromSession(session);
           if (userData && mounted) {
             setUser(userData);
             localStorage.setItem('briefing-user-data', JSON.stringify(userData));
           }
+        } else if (mounted) {
+          // Não há sessão válida - limpar dados locais
+          console.log('[Auth] Sem sessão ativa - limpando dados locais');
+          setUser(null);
+          localStorage.removeItem('briefing-user-data');
         }
       } catch (error) {
         console.error('[Auth] Erro ao inicializar:', error);
+        // Em caso de erro, limpar dados por segurança
+        if (mounted) {
+          setUser(null);
+          localStorage.removeItem('briefing-user-data');
+        }
       } finally {
         clearTimeout(timeoutId);
         if (mounted) {

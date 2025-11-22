@@ -5,16 +5,18 @@ import { LogOut, FileText, Users, Settings, Eye, Loader } from 'lucide-react';
 import { briefingsService } from '../services/supabase';
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [briefings, setBriefings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showList, setShowList] = useState(false);
 
-  // Carregar briefings ao montar o componente
+  // Carregar briefings apenas quando a autenticação estiver pronta
   useEffect(() => {
-    carregarBriefings();
-  }, []);
+    if (!authLoading && user) {
+      carregarBriefings();
+    }
+  }, [authLoading, user]);
 
   const carregarBriefings = async () => {
     try {
@@ -46,6 +48,18 @@ const Dashboard = () => {
     logout();
     navigate('/admin');
   };
+
+  // Mostrar loading enquanto verifica autenticação
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="animate-spin mx-auto text-blue-600" size={48} />
+          <p className="text-gray-600 mt-4">Verificando autenticação...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
