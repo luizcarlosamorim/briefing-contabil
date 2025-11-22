@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FileText, User, Mail, Phone, Building, MapPin, Users, Calendar, CheckCircle, AlertCircle, ArrowLeft, Download } from 'lucide-react';
+import { FileText, User, Mail, Phone, Building, MapPin, Users, Calendar, CheckCircle, AlertCircle, ArrowLeft, Download, Copy, Check } from 'lucide-react';
 import { briefingsService } from '../services/supabase';
 
 export default function Protocolo() {
@@ -9,6 +9,26 @@ export default function Protocolo() {
   const [briefing, setBriefing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [copiado, setCopiado] = useState(false);
+
+  const copiarURL = async () => {
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch (err) {
+      // Fallback para navegadores mais antigos
+      const textArea = document.createElement('textarea');
+      textArea.value = url;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    }
+  };
 
   useEffect(() => {
     const buscarBriefing = async () => {
@@ -110,6 +130,17 @@ export default function Protocolo() {
               >
                 <ArrowLeft size={18} />
                 Voltar
+              </button>
+              <button
+                onClick={copiarURL}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  copiado
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {copiado ? <Check size={18} /> : <Copy size={18} />}
+                {copiado ? 'Copiado!' : 'Copiar URL'}
               </button>
               <button
                 onClick={gerarPDF}
